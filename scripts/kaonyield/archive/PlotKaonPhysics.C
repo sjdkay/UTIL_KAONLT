@@ -32,11 +32,11 @@ void PlotKaonPhysics(string InFilename = "", string OutFilename = "")
 
   // Set paths depending on system you're running on
   if(Hostname.Contains("farm")){
-    Replaypath = "/group/c-pionlt/USERS/"+User+"/hallc_replay_lt";
+    Replaypath = "/group/c-kaonlt/USERS/"+User+"/hallc_replay_lt";
     Outpath = Replaypath+"/UTIL_KAONLT/OUTPUT/Analysis/KaonLT";
   }
   else if(Hostname.Contains("qcd")){
-    Replaypath = "/group/c-pionlt/USERS/"+User+"/hallc_replay_lt";
+    Replaypath = "/group/c-kaonlt/USERS/"+User+"/hallc_replay_lt";
     Outpath = Replaypath+"/UTIL_KAONLT/OUTPUT/Analysis/KaonLT";
   }
   else if (Hostname.Contains("phys.uregina.ca")){
