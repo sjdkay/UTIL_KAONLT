@@ -1,7 +1,8 @@
 #! /usr/bin/python
 
-# 15/10/20 - Stephen Kay, University of Regina
+# 26/05/21 - Stephen Kay, University of Regina
 # Script to extract the pion and kaon cointime peak from the data and save info as a new rootfile, subsequent script fits the peak to extract the position to examine the stability
+# This version is for the HeepCoin data, here we ONLY care about the ep coin time
 
 # Import relevant packages
 import uproot as up
@@ -62,6 +63,7 @@ else:
     print ("%s not found - do you have the correct sym link/folder set up?" % (rootName))
     sys.exit(4)
 print("Output path checks out, outputting to %s" % (OUTPATH))
+
 # Read stuff from the main event tree
 e_tree = up.open(rootName)["T"]
 # Timing info
@@ -86,18 +88,22 @@ P_aero_npeSum = e_tree.array("P.aero.npeSum")
 P_hgcer_npeSum = e_tree.array("P.hgcer.npeSum")
 P_hgcer_xAtCer = e_tree.array("P.hgcer.xAtCer")
 P_hgcer_yAtCer = e_tree.array("P.hgcer.yAtCer")
+MMpi = e_tree.array("P.kin.secondary.MMpi")
+MMK = e_tree.array("P.kin.secondary.MMK")
+MMp = e_tree.array("P.kin.secondary.MMp")
 # Relevant branches now stored as NP arrays
 
 r = klt.pyRoot()
 fout = '%s/UTIL_KAONLT/DB/CUTS/run_type/coinpeak.cuts' % REPLAYPATH
 # read in cuts file and make dictionary
+#c = klt.pyPlot(REPLAYPATH,DEBUG=True)
 c = klt.pyPlot(REPLAYPATH)
 readDict = c.read_dict(fout,runNum)
 # This method calls several methods in kaonlt package. It is required to create properly formated
 # dictionaries. The evaluation must be in the analysis script because the analysis variables (i.e. the
 # leaves of interest) are not defined in the kaonlt package. This makes the system more flexible
 # overall, but a bit more cumbersome in the analysis script. Perhaps one day a better solution will be
-# implimented.
+# implemented.
 def make_cutDict(cut,inputDict=None):
 
     global c
@@ -123,35 +129,25 @@ def make_cutDict(cut,inputDict=None):
         
     return inputDict
 
-cutDict = make_cutDict("coin_epi_cut_all")
-cutDict = make_cutDict("coin_ek_cut_all", cutDict)
-cutDict = make_cutDict("coin_ep_cut_all", cutDict)
+cutDict = make_cutDict("coin_ep_cut_all")
 c = klt.pyPlot(REPLAYPATH,cutDict)
 
 def coin_events(): 
     # Define the array of arrays containing the relevant HMS and SHMS info
-    All_Events_Uncut_tmp = [H_gtr_beta, H_gtr_xp, H_gtr_yp, H_gtr_dp, H_cal_etotnorm, H_cer_npeSum, CTime_ePiCoinTime_ROC1, CTime_eKCoinTime_ROC1, CTime_epCoinTime_ROC1, P_gtr_beta, P_gtr_xp, P_gtr_yp, P_gtr_p, P_gtr_dp, P_cal_etotnorm, P_aero_npeSum, P_hgcer_npeSum, P_hgcer_xAtCer, P_hgcer_yAtCer]
-    All_Events_Uncut = [(HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) for (HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) in zip(*All_Events_Uncut_tmp)] 
+    All_Events_Uncut_tmp = [H_gtr_beta, H_gtr_xp, H_gtr_yp, H_gtr_dp, H_cal_etotnorm, H_cer_npeSum, CTime_ePiCoinTime_ROC1, CTime_eKCoinTime_ROC1, CTime_epCoinTime_ROC1, P_gtr_beta, P_gtr_xp, P_gtr_yp, P_gtr_p, P_gtr_dp, P_cal_etotnorm, P_aero_npeSum, P_hgcer_npeSum, P_hgcer_xAtCer, P_hgcer_yAtCer, MMpi, MMK, MMp]
+    All_Events_Uncut = [(HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, pBeta, pxp, pyp, pP, pDel, pCal, pAero, pHGC, pHGCX, pHGCY, mm1, mm2, mm3) for (HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, pBeta, pxp, pyp, pP, pDel, pCal, pAero, pHGC, pHGCX, pHGCY, mm1, mm2, mm3) in zip(*All_Events_Uncut_tmp)] 
 
-    # Create array of arrays of pions and kaons after cuts, all events, prompt and random
-    Pion_Events_All_tmp =[]
-    Kaon_Events_All_tmp = []
+    # Create array of arrays of protons after cuts, all events, prompt and random
     Proton_Events_All_tmp = []
 
     # Go over every array in All_Events_Uncut_tmp, append to the other arrays the array after a cut is applied
     for arr in All_Events_Uncut_tmp:
-        Pion_Events_All_tmp.append(c.add_cut(arr, "coin_epi_cut_all")) # Apply PID but no cointime cut
-        Kaon_Events_All_tmp.append(c.add_cut(arr, "coin_ek_cut_all")) # Apply PID but no cointime cut
         Proton_Events_All_tmp.append(c.add_cut(arr, "coin_ep_cut_all")) # Apply PID but no cointime cut
       
-    Pion_Events_All = [(HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) for (HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) in zip(*Pion_Events_All_tmp)] 
-    Kaon_Events_All = [(HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) for (HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) in zip(*Kaon_Events_All_tmp)]
-    Proton_Events_All = [(HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) for (HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, KBeta, Kxp, Kyp, KP, KDel, KCal, KAero, KHGC, KHGCX, KHGCY) in zip(*Proton_Events_All_tmp)]
+    Proton_Events_All = [(HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, pBeta, pxp, pyp, pP, pDel, pCal, pAero, pHGC, pHGCX, pHGCY, mm1, mm2, mm3) for (HBeta, Hxp, Hyp, Hdel, HCal, HCer, CTPi, CTK, CTp, pBeta, pxp, pyp, pP, pDel, pCal, pAero, pHGC, pHGCX, pHGCY, mm1, mm2, mm3) in zip(*Proton_Events_All_tmp)]
 
     COIN_EventInfo = {
         "All_Events" : All_Events_Uncut,
-        "Pions_All" : Pion_Events_All,
-        "Kaons_All" : Kaon_Events_All,
         "Protons_All" : Proton_Events_All,
         }
 
@@ -160,7 +156,7 @@ def coin_events():
 def main():
     COIN_Data = coin_events()
 
-    COIN_All_Data_Header = ["H_gtr_beta","H_gtr_xp","H_gtr_yp","H_gtr_dp","H_cal_etotnorm","H_cer_npeSum","CTime_ePiCoinTime_ROC1","CTime_eKCoinTime_ROC1","CTime_epCoinTime_ROC1","P_gtr_beta","P_gtr_xp","P_gtr_yp","P_gtr_p","P_gtr_dp","P_cal_etotnorm","P_aero_npeSum","P_hgcer_npeSum","P_hgcer_xAtCer","P_hgcer_yAtCer"]
+    COIN_All_Data_Header = ["H_gtr_beta","H_gtr_xp","H_gtr_yp","H_gtr_dp","H_cal_etotnorm","H_cer_npeSum","CTime_ePiCoinTime_ROC1","CTime_eKCoinTime_ROC1","CTime_epCoinTime_ROC1","P_gtr_beta","P_gtr_xp","P_gtr_yp","P_gtr_p","P_gtr_dp","P_cal_etotnorm","P_aero_npeSum","P_hgcer_npeSum","P_hgcer_xAtCer","P_hgcer_yAtCer","MMpi","MMK","MMp"]
 
     data_keys = list(COIN_Data.keys()) # Create a list of all the keys in all dicts added above, each is an array of data
     #print(data_keys)
@@ -168,9 +164,9 @@ def main():
     for i in range (0, len(data_keys)):
         DFHeader=list(COIN_All_Data_Header)
         if (i == 0):
-            pd.DataFrame(COIN_Data.get(data_keys[i]), columns = DFHeader, index = None).to_root("%s/%s_%s_CTPeak_Data.root" % (OUTPATH, runNum, MaxEvent), key ="%s" % data_keys[i])
+            pd.DataFrame(COIN_Data.get(data_keys[i]), columns = DFHeader, index = None).to_root("%s/%s_%s_CTPeak_Data_HeepCoin.root" % (OUTPATH, runNum, MaxEvent), key ="%s" % data_keys[i])
         elif (i != 0):
-            pd.DataFrame(COIN_Data.get(data_keys[i]), columns = DFHeader, index = None).to_root("%s/%s_%s_CTPeak_Data.root" % (OUTPATH, runNum, MaxEvent), key ="%s" % data_keys[i], mode ='a') 
+            pd.DataFrame(COIN_Data.get(data_keys[i]), columns = DFHeader, index = None).to_root("%s/%s_%s_CTPeak_Data_HeepCoin.root" % (OUTPATH, runNum, MaxEvent), key ="%s" % data_keys[i], mode ='a') 
                     
 if __name__ == '__main__':
     main()
